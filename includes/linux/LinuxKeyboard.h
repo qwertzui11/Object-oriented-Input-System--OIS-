@@ -77,9 +77,9 @@ namespace OIS
 			return false;
 		}
 
-		bool _injectKeyDown( KeyCode kc, int text );
-		bool _injectKeyUp( KeyCode kc );
-		void _handleKeyPress( XEvent& event );
+        bool _injectKeyDown( KeyCode kc, unsigned int native_key, unsigned int text );
+        bool _injectKeyUp(KeyCode kc, unsigned int native_key, unsigned int text );
+        void _handleKeyPress( XEvent& event );
 		void _handleKeyRelease( XEvent& event );
 
 		inline KeyCode KeySymToOISKeyCode( KeySym keySym )
@@ -87,8 +87,10 @@ namespace OIS
 			if (keySym != NoSymbol)
 			{
 				::KeyCode xkc = XKeysymToKeycode(display, keySym);
-				if (xkc > 8)
-					return static_cast<KeyCode>(xkc - 8);
+                if (xkc > 8)
+                {
+                    return static_cast<KeyCode>(xkc - 8);
+                }
 			}
 			return KC_UNASSIGNED;
 		}

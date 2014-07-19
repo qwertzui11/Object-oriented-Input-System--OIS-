@@ -28,6 +28,7 @@ restrictions:
 #include <X11/keysym.h>
 #include <X11/Xutil.h>
 #include <cstring>
+#include <bitset>
 
 using namespace OIS;
 #include <iostream>
@@ -49,23 +50,32 @@ void LinuxKeyboard::_initialize()
 {
 	//Set the locale to (hopefully) the users LANG UTF-8 Env var
 	if (setlocale(LC_ALL, "") == NULL)
-		OIS_WARN(E_General, "LinuxKeyboard::_initialize: Failed to set default locale.");
+    {
+        OIS_WARN(E_General, "LinuxKeyboard::_initialize: Failed to set default locale.");
+    }
 
 	//Clear our keyboard state buffer
 	memset( &KeyBuffer, 0, 256 );
 	mModifiers = 0;
 
-	if( display ) XCloseDisplay(display);
+    if( display )
+    {
+        XCloseDisplay(display);
+    }
 	display = 0;
 	window = static_cast<LinuxInputManager*>(mCreator)->_getWindow();
 
 	//Create our local X mListener connection
 	if( !(display = XOpenDisplay(0)) )
+    {
 		OIS_EXCEPT(E_General, "LinuxKeyboard::_initialize >> Error opening X!");
+    }
 
 	//Configure locale modifiers
 	if ( XSetLocaleModifiers("@im=none") == NULL)
+    {
 		OIS_WARN(E_General, "LinuxKeyboard::_initialize: Failed to configure locale modifiers.");
+    }
 
 	//Open input method
 	xim = XOpenIM(display, NULL, NULL, NULL);
@@ -102,7 +112,9 @@ void LinuxKeyboard::_initialize()
 
 	//Set it to receive Input events
 	if( XSelectInput(display, window, KeyPressMask | KeyReleaseMask) == BadWindow )
+    {
 		OIS_EXCEPT(E_General, "LinuxKeyboard::_initialize: X error!");
+    }
 
 	if ( xim && ximStyle )
 	{
@@ -112,11 +124,15 @@ void LinuxKeyboard::_initialize()
 				XNFocusWindow, window,
 				NULL);
 		if ( !xic )
-			OIS_WARN(E_General, "LinuxKeyboard::_initialize: Failed to create input context.");
+        {
+            OIS_WARN(E_General, "LinuxKeyboard::_initialize: Failed to create input context.");
+        }
 	}
 
 	if( grabKeyboard )
-		XGrabKeyboard(display,window,True,GrabModeAsync,GrabModeAsync,CurrentTime);
+    {
+        XGrabKeyboard(display,window,True,GrabModeAsync,GrabModeAsync,CurrentTime);
+    }
 
 	keyFocusLost = false;
 }
@@ -127,13 +143,19 @@ LinuxKeyboard::~LinuxKeyboard()
 	if( display )
 	{
 		if( grabKeyboard )
-			XUngrabKeyboard(display, CurrentTime);
+        {
+            XUngrabKeyboard(display, CurrentTime);
+        }
 
 		if ( xic )
-			XDestroyIC(xic);
+        {
+            XDestroyIC(xic);
+        }
 
 		if ( xim )
-			XCloseIM(xim);
+        {
+            XCloseIM(xim);
+        }
 
 		XCloseDisplay(display);
 	}
@@ -219,14 +241,14 @@ void LinuxKeyboard::capture()
 			// are no longer grabbing
 			if( keyFocusLost == false )
 			{
-				//UnGrab KeyBoard
+                // UnGrab KeyBoard
 				XUngrabKeyboard(display, CurrentTime);
 				keyFocusLost = true;
 			}
 		}
 		else
 		{
-			//We are grabbing - and regained focus
+            // We are grabbing - and regained focus
 			if( keyFocusLost == true )
 			{
 				//ReGrab KeyBoard
@@ -240,62 +262,50 @@ void LinuxKeyboard::capture()
 //-------------------------------------------------------------------//
 void LinuxKeyboard::_handleKeyPress( XEvent& event )
 {
-	XKeyEvent& e = (XKeyEvent&)event;
-	static std::vector<char> buf(32);
+    XKeyEvent& evt = (XKeyEvent&)event;
 	KeySym keySym;
-	unsigned int character = 0;
-	int bytes = 0;
-	bool haveChar = true;
+    std::vector<char> buffer(8, 0);
 
-	haveChar = !XFilterEvent(&event, None);
+//    if(XFilterEvent(&event, None))
+//    {
+//        return;
+//    }
 
-	if (xic)
-	{
-		Status status;
-		do
-		{
-			bytes = Xutf8LookupString(xic, &e, &buf[0], buf.size()-1, &keySym, &status);
-			buf[bytes] = '\0';
-
-			if (status == XBufferOverflow)
-				buf.resize(buf.size() * 2);
-		} while (status == XBufferOverflow);
-	}
-	else
-	{
-		bytes = XLookupString(&e, &buf[0], buf.size()-1, &keySym, NULL);
-		buf[bytes] = '\0';
-	}
-
-	if (haveChar && bytes > 0)
-	{
-		if( mTextMode == Unicode )
-			character = UTF8ToUTF32(reinterpret_cast<unsigned char*>(&buf[0]));
-		else if( mTextMode == Ascii)
-			character = buf[0];
-	}
+    XLookupString(&evt, buffer.data(), buffer.size(), &keySym, NULL);
+    unsigned int character = UTF8ToUTF32(reinterpret_cast<unsigned char*>(buffer.data()));
 
 	KeyCode kc = KeySymToOISKeyCode(keySym);
-	_injectKeyDown(kc, character);
+
+    _injectKeyDown(kc, keySym, character);
 
 	//Check for Alt-Tab
 	LinuxInputManager* linMan = static_cast<LinuxInputManager*>(mCreator);
-	if ( (e.state & Mod1Mask) && (keySym == XK_Tab) )
+    if ( (evt.state & Mod1Mask) && (keySym == XK_Tab) )
+    {
 		linMan->_setGrabState(false);
+    }
 }
 
 void LinuxKeyboard::_handleKeyRelease( XEvent& event )
 {
-	XKeyEvent& e = (XKeyEvent&)event;
-	KeySym keySym;
+    XKeyEvent& evt = (XKeyEvent&)event;
+    KeySym keySym;
+    std::vector<char> buffer(8, 0);
 
-	XFilterEvent(&event, None);
+//    if(XFilterEvent(&event, None))
+//    {
+//        return;
+//    }
+
+    XLookupString(&evt, buffer.data(), buffer.size(), &keySym, NULL);
+    unsigned int character = UTF8ToUTF32(reinterpret_cast<unsigned char*>(buffer.data()));
+
+//    std::cout << "buffer.data():" << buffer.data() << "\n";
+
 	if (!_isKeyRepeat(event))
 	{
-		XLookupString(&e, NULL, 0, &keySym, NULL);
-
 		KeyCode kc = KeySymToOISKeyCode(keySym);
-		_injectKeyUp(kc);
+        _injectKeyUp(kc, keySym, character);
 	}
 }
 
@@ -306,41 +316,60 @@ void LinuxKeyboard::setBuffered(bool buffered)
 }
 
 //-------------------------------------------------------------------//
-bool LinuxKeyboard::_injectKeyDown( KeyCode kc, int text )
+bool LinuxKeyboard::_injectKeyDown( KeyCode kc, unsigned int native_key, unsigned int text )
 {
-	if (kc > 255) kc = KC_UNASSIGNED;
+    if (kc > 255)
+    {
+        kc = KC_UNASSIGNED;
+    }
 	KeyBuffer[kc] = 1;
 
 	//Turn on modifier flags
 	if( kc == KC_LCONTROL || kc == KC_RCONTROL)
+    {
 		mModifiers |= Ctrl;
+    }
 	else if( kc == KC_LSHIFT || kc == KC_RSHIFT )
+    {
 		mModifiers |= Shift;
+    }
 	else if( kc == KC_LMENU || kc == KC_RMENU )
+    {
 		mModifiers |= Alt;
+    }
 
 	if( mBuffered && mListener )
-		return mListener->keyPressed(KeyEvent(this,kc,text));
+    {
+        return mListener->keyPressed(KeyEvent(this,kc,native_key,text));
+    }
 
 	return true;
 }
 
 //-------------------------------------------------------------------//
-bool LinuxKeyboard::_injectKeyUp( KeyCode kc )
+bool LinuxKeyboard::_injectKeyUp(KeyCode kc, unsigned int native_key, unsigned int text)
 {
 	if (kc > 255) kc = KC_UNASSIGNED;
 	KeyBuffer[kc] = 0;
 
 	//Turn off modifier flags
 	if( kc == KC_LCONTROL || kc == KC_RCONTROL)
+    {
 		mModifiers &= ~Ctrl;
+    }
 	else if( kc == KC_LSHIFT || kc == KC_RSHIFT )
+    {
 		mModifiers &= ~Shift;
+    }
 	else if( kc == KC_LMENU || kc == KC_RMENU )
+    {
 		mModifiers &= ~Alt;
+    }
 
 	if( mBuffered && mListener )
-		return mListener->keyReleased(KeyEvent(this, kc, 0));
+    {
+        return mListener->keyReleased(KeyEvent(this, kc, native_key, text));
+    }
 
 	return true;
 }

@@ -183,11 +183,12 @@ namespace OIS
 	class _OISExport KeyEvent : public EventArg
 	{
 	public:
-		KeyEvent(Object* obj, KeyCode kc, unsigned int txt) : EventArg(obj), key(kc), text(txt) {}
+        KeyEvent(Object* obj, KeyCode kc, unsigned int native_key_, unsigned int txt) : EventArg(obj), key(kc), native_key(native_key_), text(txt) {}
 		virtual ~KeyEvent() {}
 
 		//! KeyCode of event
 		const KeyCode key;
+        unsigned int native_key;
 		//! Text character, depends on current TextTranslationMode
 		unsigned int text;
 	};
