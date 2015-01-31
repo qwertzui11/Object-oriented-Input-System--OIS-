@@ -151,12 +151,19 @@ namespace OIS
 		KC_RMENU       = 0xB8,    // right Alt
 		KC_PAUSE       = 0xC5,    // Pause
 		KC_HOME        = 0xC7,    // Home on arrow keypad
-		KC_UP          = 0xC8,    // UpArrow on arrow keypad
 		KC_PGUP        = 0xC9,    // PgUp on arrow keypad
+#ifdef OIS_LINUX_PLATFORM
+                KC_UP          = 0x67,    // UpArrow on arrow keypad
+                KC_LEFT        = 0x69,    // LeftArrow on arrow keypad
+                KC_RIGHT       = 0x6A,    // RightArrow on arrow keypad
+                KC_DOWN        = 0x6C,    // DownArrow on arrow keypad
+#else
+                KC_UP          = 0xC8,    // UpArrow on arrow keypad
 		KC_LEFT        = 0xCB,    // LeftArrow on arrow keypad
 		KC_RIGHT       = 0xCD,    // RightArrow on arrow keypad
+                KC_DOWN        = 0xD0,    // DownArrow on arrow keypad
+#endif
 		KC_END         = 0xCF,    // End on arrow keypad
-		KC_DOWN        = 0xD0,    // DownArrow on arrow keypad
 		KC_PGDOWN      = 0xD1,    // PgDn on arrow keypad
 		KC_INSERT      = 0xD2,    // Insert on arrow keypad
 		KC_DELETE      = 0xD3,    // Delete on arrow keypad
